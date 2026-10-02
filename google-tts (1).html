@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gemini TTS Studio (free)</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--bd:#2a2f3a;--tx:#e8eaf0;--mu:#8b93a7;--ac:#5b8cff;--ok:#3ecf8e;--wa:#f5a623;--er:#ff5d5d}
+@media (prefers-color-scheme:light){:root{--bg:#f4f6fa;--card:#fff;--bd:#d9dee8;--tx:#1b1f2a;--mu:#667086}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:20px}h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mu);margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{font-size:14px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;color:var(--mu)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{display:block;font-size:13px;color:var(--mu);margin-bottom:4px}
+input,select,textarea,button{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;width:100%}
+textarea{min-height:170px;resize:vertical}input[type=range]{padding:0;accent-color:var(--ac)}input[type=checkbox]{width:auto}
+button{cursor:pointer;width:auto;background:var(--bd)}button:hover{filter:brightness(1.15)}
+button.pri{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>input{flex:1;min-width:200px}
+.val{float:right;color:var(--tx)}.mu{color:var(--mu);font-size:13px}
+.key{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--bd);font-size:13px;flex-wrap:wrap}
+.key:first-child{border-top:0}.key code{flex:1;min-width:120px}
+.pill{padding:2px 8px;border-radius:99px;font-size:12px;border:1px solid}.ready{color:var(--ok)}.cool{color:var(--wa)}.bad{color:var(--er)}
+.key button,.tags button{padding:3px 8px;font-size:12px}.tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+#log{font:12px/1.5 ui-monospace,monospace;color:var(--mu);max-height:150px;overflow:auto;white-space:pre-wrap}
+audio{width:100%;margin-top:10px}.bar{height:6px;background:var(--bd);border-radius:9px;overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:var(--ac);transition:width .2s}
+.chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mu)}
+.hist{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--bd);font-size:13px}.hist span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎙️ Gemini TTS Studio <span class="pill ready" style="font-size:11px">free tier</span></h1>
+<div class="sub">Google's latest Gemini 3.8 text-to-speech via the free Google AI Studio API · multi-key rotation with auto-recovery</div>
+
+<div class="card">
+<h2>API keys (Google AI Studio)</h2>
+<div class="mu" style="margin-bottom:8px">Get free keys (no credit card) at <b>aistudio.google.com/apikey</b> — they start with <code>AIza…</code>. Use different Google accounts/projects for more free quota.</div>
+<div class="row"><input id="keyIn" type="password" placeholder="Paste one or many keys (comma / space / new line separated)"><button class="pri" id="addKey">Add key(s)</button></div>
+<div id="keys" style="margin-top:8px"></div>
+<div class="row" style="margin-top:8px"><button id="recheck">Recheck all keys</button><button id="clearKeys">Remove all</button></div>
+<div class="mu" style="margin-top:8px">If a key fails (invalid, blocked, quota/rate limit, network) it is put on a short cooldown and the next key is used. Keys are never deleted automatically and are retried again automatically. Keys stay only in this browser.</div>
+</div>
+
+<div class="card">
+<h2>Text</h2>
+<div class="chk" style="margin-bottom:8px"><input type="checkbox" id="dlg"> Dialogue mode (2 speakers) — write lines like <code>Joe: Hello there</code> and <code>Jane: Hi!</code></div>
+<textarea id="text">Hello! This is a demo of Google's Gemini text to speech. <short pause> Pick a voice, choose a style, then press Play.</textarea>
+<div class="tags" id="tags"></div>
+<div class="row" style="justify-content:space-between"><span class="mu">Tip: click a tag to insert it at the cursor. Use CAPS for emphasis.</span><span class="mu" id="count"></span></div>
+</div>
+
+<div class="card">
+<h2>Voice &amp; audio options</h2>
+<div class="grid">
+<div><label>Model</label><select id="model"><option value="gemini-3.8-flash-tts">Gemini 3.8 Flash TTS (best quality)</option><option value="gemini-3.8-flash-lite-tts">Gemini 3.8 Flash-Lite TTS (fast / bulk)</option></select>
+<div class="chk" style="margin-top:6px"><input type="checkbox" id="fb" checked> Auto-fallback to the other model if limit hit</div></div>
+<div id="v1w"><label id="v1l">Narrator (voice)</label><select id="voice"></select></div>
+<div id="v2w" class="hide"><label>Speaker 2 voice</label><select id="voice2"></select></div>
+<div id="n1w" class="hide"><label>Speaker 1 name</label><input id="n1" value="Joe"></div>
+<div id="n2w" class="hide"><label>Speaker 2 name</label><input id="n2" value="Jane"></div>
+<div><label>Delivery style (preset)</label><select id="stylep"><option value="">None (natural)</option><option>cheerful and friendly</option><option>calm and relaxed</option><option>warm storyteller, slow and gentle</option><option>excited and energetic</option><option>serious news anchor</option><option>whispering</option><option>sad and somber</option><option>angry and intense</option><option>sarcastic</option><option>speaking slowly</option><option>speaking rapidly</option><option>professional audiobook narrator</option></select></div>
+<div><label>Custom style (overrides preset)</label><input id="stylec" placeholder="e.g. out of breath, then reassuring"></div>
+<div><label>Sample rate</label><select id="sr"><option value="">24000 Hz (default)</option><option>16000</option><option>8000</option></select></div>
+<div><label>Playback speed <span class="val" id="rv">1.00x</span></label><input type="range" id="rate" min="0.5" max="2" step="0.05" value="1"></div>
+<div><label>Max characters per request <span class="val" id="mv">1800</span></label><input type="range" id="maxc" min="500" max="3000" step="100" value="1800"></div>
+</div>
+<details style="margin-top:12px"><summary class="mu" style="cursor:pointer">Extended voice library (hundreds of voices, accents &amp; languages)</summary>
+<div class="grid" style="margin-top:10px">
+<div><label>Language</label><select id="ll"><option value="">All</option></select></div>
+<div><label>Gender</label><select id="lg"><option value="">Any</option><option>female</option><option>male</option><option>neutral</option></select></div>
+<div><label>Search</label><input id="ls" placeholder="warm, narrator, British…"></div>
+<div><label>&nbsp;</label><button id="loadLib">Load voice library</button></div>
+</div></details>
+<div class="mu" style="margin:10px 0">Language is detected automatically from your text (130+ languages incl. Urdu/Hindi/Arabic). Speed/pitch are controlled through Style; playback speed is applied in the player.</div>
+<div class="row"><button class="pri" id="play">▶ Play</button><button id="stop">■ Stop</button><button id="dl" disabled>⬇ Download WAV</button></div>
+<div class="bar"><i id="prog"></i></div>
+<audio id="audio" controls></audio>
+</div>
+
+<div class="card"><h2>History (this session)</h2><div id="hist" class="mu">Nothing generated yet.</div></div>
+<div class="card"><h2>Activity log</h2><div id="log"></div>
+<div class="mu" style="margin-top:8px">Privacy: on the free tier Google may use your inputs to improve its products and human reviewers may read them (not in EEA/UK/Switzerland). Don't send confidential text.</div></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id), API='https://generativelanguage.googleapis.com/v1beta/';
+const STUDIO=[["Zephyr","Bright"],["Puck","Upbeat"],["Charon","Informative"],["Kore","Firm"],["Fenrir","Excitable"],["Leda","Youthful"],["Orus","Firm"],["Aoede","Breezy"],["Callirrhoe","Easy-going"],["Autonoe","Bright"],["Enceladus","Breathy"],["Iapetus","Clear"],["Umbriel","Easy-going"],["Algieba","Smooth"],["Despina","Smooth"],["Erinome","Clear"],["Algenib","Gravelly"],["Rasalgethi","Informative"],["Laomedeia","Upbeat"],["Achernar","Soft"],["Alnilam","Firm"],["Schedar","Even"],["Gacrux","Mature"],["Pulcherrima","Forward"],["Achird","Friendly"],["Zubenelgenubi","Casual"],["Vindemiatrix","Gentle"],["Sadachbia","Lively"],["Sadaltager","Knowledgeable"],["Sulafat","Warm"]];
+const TAGS=["short pause","long pause","breath","sigh","laugh","chuckle","giggle","gasp","cough","throat-clearing","whispers","cry","groan","shout","yawn","tsk"];
+let keys=[],lib=[],lastBlob=null,busy=false,cancel=false,rr=0,hist=[];
+const log=m=>{const l=$('log');l.textContent+=`[${new Date().toLocaleTimeString()}] ${m}\n`;l.scrollTop=l.scrollHeight};
+
+/* ---------- keys ---------- */
+const mask=k=>k.length>10?k.slice(0,6)+'••••••'+k.slice(-4):'••••';
+const load=()=>{try{keys=JSON.parse(localStorage.getItem('gtts_keys')||'[]')}catch(e){keys=[]}};
+const save=()=>{try{localStorage.setItem('gtts_keys',JSON.stringify(keys))}catch(e){}};
+function renderKeys(){
+  const now=Date.now();$('keys').innerHTML=keys.length?'':'<div class="mu">No keys yet.</div>';
+  keys.forEach((k,i)=>{
+    const cd=Math.max(k.until||0,...Object.values(k.cd||{0:0}));
+    const st=cd>now?`<span class="pill cool">cooldown ${Math.ceil((cd-now)/1000)}s</span>`:k.fails?'<span class="pill bad">retry pending</span>':'<span class="pill ready">ready</span>';
+    const d=document.createElement('div');d.className='key';
+    d.innerHTML=`<code>${mask(k.k)}</code>${st}<span class="mu">${k.used||0} ok · ${k.fails||0} fails</span><span class="mu" title="${(k.err||'').replace(/"/g,'')}">${(k.err||'').slice(0,60)}</span><button data-t="${i}">Test</button><button data-r="${i}">Remove</button>`;
+    $('keys').appendChild(d);
+  });
+}
+$('keys').onclick=async e=>{
+  if(e.target.dataset.r!==undefined){keys.splice(+e.target.dataset.r,1);save();renderKeys()}
+  if(e.target.dataset.t!==undefined)await testKey(keys[+e.target.dataset.t]);
+};
+$('addKey').onclick=()=>{
+  let n=0;$('keyIn').value.split(/[\s,;]+/).filter(Boolean).forEach(p=>{
+    if(p.startsWith('AQ.'))log('⚠ '+mask(p)+' starts with "AQ." (Vertex express key) — may not work. AI Studio keys start with "AIza".');
+    if(!keys.some(k=>k.k===p)){keys.push({k:p,fails:0,until:0,cd:{},used:0,err:''});n++}
+  });
+  $('keyIn').value='';save();renderKeys();log(`Added ${n} key(s).`);keys.slice(-n||keys.length).forEach(k=>n&&testKey(k));
+};
+$('clearKeys').onclick=()=>{if(confirm('Remove all saved keys?')){keys=[];save();renderKeys()}};
+$('recheck').onclick=async()=>{keys.forEach(k=>{k.until=0;k.cd={}});save();for(const k of keys)await testKey(k)};
+
+function fail(k,kind,msg,model){
+  k.fails=(k.fails||0)+1;
+  const base={quota:60,auth:30,net:10}[kind]||30,cap=kind==='quota'?900:120;
+  const s=Math.min(base*2**Math.min(k.fails-1,5),cap),until=Date.now()+s*1000;
+  if(kind==='quota'&&model){k.cd=k.cd||{};k.cd[model]=until}else k.until=until;
+  k.err=msg;log(`Key ${mask(k.k)} failed (${kind}${model&&kind==='quota'?' on '+model:''}): ${msg.slice(0,140)} → retry in ${s}s`);save();renderKeys();
+}
+const ok=k=>{k.fails=0;k.until=0;k.cd={};k.err='';k.used=(k.used||0)+1;save();renderKeys()};
+function classify(st,b){
+  const m=b?.error?.message||'',s=b?.error?.status||'';
+  if(st===429||s==='RESOURCE_EXHAUSTED'||/quota|rate.?limit/i.test(m))return'quota';
+  if(st===401||st===403||/API key|API_KEY|permission|billing|blocked|expired|suspended/i.test(m))return'auth';
+  if(st>=500||st===408)return'net';
+  return'input';
+}
+async function raw(k,path,opt={}){
+  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),120000);
+  try{
+    const r=await fetch(API+path,{...opt,headers:{'x-goog-api-key':k.k,...(opt.body?{'Content-Type':'application/json'}:{})},signal:ctl.signal});
+    let b=null;try{b=await r.json()}catch(e){}
+    return{ok:r.ok,status:r.status,body:b};
+  }finally{clearTimeout(t)}
+}
+async function testKey(k){
+  try{const r=await raw(k,'voices?page_size=1');
+    if(r.ok){ok(k);log(`Key ${mask(k.k)} is valid ✔`)}
+    else{const kind=classify(r.status,r.body);fail(k,kind==='input'?'auth':kind,r.body?.error?.message||'HTTP '+r.status)}
+  }catch(e){fail(k,'net',e.name==='AbortError'?'timeout':'network error')}
+}
+/* try every key (ready first, round-robin; then cooling ones, soonest first) for each model — nothing is ever dropped */
+async function api(path,makeOpt,models){
+  if(!keys.length)throw new Error('Add at least one API key first.');
+  const errs=[];
+  for(const model of models){
+    const now=Date.now(),isReady=k=>(k.until||0)<=now&&((k.cd||{})[model]||0)<=now,until=k=>Math.max(k.until||0,(k.cd||{})[model]||0);
+    const ready=keys.filter(isReady),cool=keys.filter(k=>!isReady(k)).sort((a,b)=>until(a)-until(b));
+    const order=[...ready.map((_,i)=>ready[(i+rr)%ready.length]),...cool];rr++;
+    for(const k of order){
+      if(cancel)throw new Error('Cancelled');
+      try{
+        const r=await raw(k,path,makeOpt(model));
+        if(r.ok){ok(k);return{body:r.body,model}}
+        const kind=classify(r.status,r.body),msg=r.body?.error?.message||'HTTP '+r.status;
+        if(kind==='input')throw Object.assign(new Error(msg),{input:true});
+        fail(k,kind,msg,model);errs.push(msg);
+      }catch(e){
+        if(e.input||e.message==='Cancelled')throw e;
+        fail(k,'net',e.name==='AbortError'?'timeout':'network error',model);errs.push(e.message);
+      }
+    }
+    if(models.length>1&&model!==models[models.length-1])log(`All keys failed on ${model}, trying fallback model…`);
+  }
+  throw new Error('All keys failed: '+[...new Set(errs)].map(s=>s.slice(0,120)).join(' | '));
+}
+setInterval(async()=>{renderKeys();if(busy)return;for(const k of keys)if(k.fails&&Math.max(k.until||0)<=Date.now()&&k.until)await testKey(k)},20000);
+setInterval(renderKeys,1000);
+
+/* ---------- voices ---------- */
+function fillVoices(){
+  const opts=(sel,keep)=>{
+    const prev=keep||sel.value;
+    sel.innerHTML='<optgroup label="Studio voices">'+STUDIO.map(v=>`<option value="${v[0]}">${v[0]} — ${v[1]}</option>`).join('')+'</optgroup>';
+    const L=filtered();if(L.length)sel.innerHTML+='<optgroup label="Voice library ('+L.length+')">'+L.slice(0,500).map(v=>`<option value="${v.id}">${v.name} · ${v.lang||''} ${v.gender||''} ${v.accent||''}</option>`).join('')+'</optgroup>';
+    if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+  };
+  const p2=$('voice2').value;opts($('voice'));opts($('voice2'),p2||'Puck');if(!p2)$('voice2').value='Puck';
+  if(!$('voice').value||$('voice').selectedIndex<0)$('voice').value='Kore';
+}
+const filtered=()=>lib.filter(v=>(!$('ll').value||v.lang===$('ll').value)&&(!$('lg').value||(v.gender||'').toLowerCase()===$('lg').value)&&(!$('ls').value||(v.name+' '+(v.desc||'')+' '+(v.accent||'')).toLowerCase().includes($('ls').value.toLowerCase())));
+['ll','lg'].forEach(i=>$(i).onchange=fillVoices);$('ls').oninput=fillVoices;
+$('loadLib').onclick=async()=>{
+  try{
+    const {body}=await api('voices?page_size=1000',()=>({}),[$('model').value]);
+    lib=(body.voices||[]).map(v=>({id:v.id,name:v.display_name||v.displayName||v.id,lang:v.language_code||v.languageCode,gender:v.gender,accent:v.accent,desc:v.description}));
+    const ls=[...new Set(lib.map(v=>v.lang).filter(Boolean))].sort();
+    $('ll').innerHTML='<option value="">All</option>'+ls.map(l=>`<option>${l}</option>`).join('');
+    fillVoices();log(`Loaded ${lib.length} library voices — pick them in the voice dropdown.`);
+  }catch(e){log('Could not load library: '+e.message)}
+};
+
+/* ---------- UI ---------- */
+$('tags').innerHTML='<span class="mu">Insert:</span>';
+TAGS.forEach(t=>{const b=document.createElement('button');b.textContent='<'+t+'>';b.onclick=()=>{const a=$('text'),s=a.selectionStart,e=a.selectionEnd,x=' <'+t+'> ';a.value=a.value.slice(0,s)+x+a.value.slice(e);a.focus();a.selectionStart=a.selectionEnd=s+x.length;cnt()};$('tags').appendChild(b)});
+function dlgUI(){const d=$('dlg').checked;['v2w','n1w','n2w'].forEach(i=>$(i).classList.toggle('hide',!d));$('v1l').textContent=d?'Speaker 1 voice':'Narrator (voice)';
+  if(d&&/^Hello! This is a demo/.test($('text').value))$('text').value="Joe: Hey Jane, did you try the new voices yet? <laugh>\nJane: I did! They sound incredibly natural.\nJoe: Right? Let's record a podcast.";}
+$('dlg').onchange=dlgUI;
+const cnt=()=>$('count').textContent=$('text').value.length+' characters';$('text').oninput=cnt;cnt();
+$('rate').oninput=()=>{$('rv').textContent=(+$('rate').value).toFixed(2)+'x';$('audio').playbackRate=+$('rate').value};
+$('maxc').oninput=()=>$('mv').textContent=$('maxc').value;
+$('audio').onplay=()=>$('audio').playbackRate=+$('rate').value;
+
+/* ---------- text prep ---------- */
+function splitText(t,max){
+  const out=[];let cur='';
+  for(let p of t.replace(/\r/g,'').split(/(?<=[.!?।۔؟…\n])\s+/)){
+    while(p.length>max){if(cur){out.push(cur);cur=''}out.push(p.slice(0,max));p=p.slice(max)}
+    if((cur+' '+p).length>max){if(cur)out.push(cur);cur=p}else cur=cur?cur+' '+p:p;
+  }
+  if(cur.trim())out.push(cur);return out;
+}
+function buildChunks(){
+  const text=$('text').value.trim(),max=+$('maxc').value;
+  if(!$('dlg').checked)return splitText(text,max).map(t=>[{text:t}]);
+  const n1=$('n1').value.trim()||'Joe',n2=$('n2').value.trim()||'Jane',turns=[];
+  text.split(/\n+/).forEach(line=>{
+    const m=line.match(/^\s*([^:：]{1,30})[:：]\s*(.*)$/),nm=m&&[n1,n2].find(n=>n.toLowerCase()===m[1].trim().toLowerCase());
+    if(nm)turns.push({speaker:nm,text:m[2]});else if(line.trim()){if(turns.length)turns[turns.length-1].text+=' '+line.trim();else turns.push({speaker:n1,text:line.trim()})}
+  });
+  const chunks=[];let cur=[],len=0;
+  turns.forEach(t=>splitText(t.text,max).forEach(p=>{if(len+p.length>max&&cur.length){chunks.push(cur);cur=[];len=0}cur.push({speaker:t.speaker,text:p});len+=p.length}));
+  if(cur.length)chunks.push(cur);return chunks;
+}
+function body(model,chunk){
+  const style=($('stylec').value.trim()||$('stylep').value),d=$('dlg').checked;
+  const content=chunk.map(t=>{const a={type:'speech_metadata'};if(t.speaker)a.speaker=t.speaker;if(style)a.style=style;
+    return{type:'text',text:t.text,...(Object.keys(a).length>1?{annotations:[a]}:{})}});
+  const rf={type:'audio'};if($('sr').value){rf.mime_type='audio/wav';rf.sample_rate=+$('sr').value}
+  const sc=d?{mode:'conversational',speakers:[{speaker:$('n1').value.trim()||'Joe',voice:$('voice').value},{speaker:$('n2').value.trim()||'Jane',voice:$('voice2').value}]}:[{voice:$('voice').value}];
+  return JSON.stringify({model,input:[{type:'user_input',content}],response_format:rf,generation_config:{speech_config:sc}});
+}
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+function mergeWav(a){
+  if(a.length===1)return a[0];
+  const d=a.map(x=>x.slice(44)),n=d.reduce((s,x)=>s+x.length,0),o=new Uint8Array(44+n);
+  o.set(a[0].slice(0,44),0);let p=44;d.forEach(x=>{o.set(x,p);p+=x.length});
+  const v=new DataView(o.buffer);v.setUint32(4,36+n,true);v.setUint32(40,n,true);return o;
+}
+function findAudio(b){
+  const arr=[];(b?.steps||[]).forEach(s=>(s.content||[]).forEach(c=>{if(c.type==='audio'&&c.data)arr.push(c.data)}));
+  if(!arr.length&&b?.output_audio?.data)arr.push(b.output_audio.data);
+  return arr.pop();
+}
+
+/* ---------- synthesize ---------- */
+async function synth(){
+  if(!$('text').value.trim())return alert('Enter some text first.');
+  if(!keys.length)return alert('Add at least one API key.');
+  const chunks=buildChunks();if(!chunks.length)return alert('Nothing to speak.');
+  const m=$('model').value,models=$('fb').checked?[m,m.includes('lite')?'gemini-3.8-flash-tts':'gemini-3.8-flash-lite-tts']:[m];
+  busy=true;cancel=false;$('play').disabled=true;$('dl').disabled=true;$('prog').style.width='0';
+  const bufs=[];
+  try{
+    log(`Generating ${chunks.length} part(s)…`);
+    for(let i=0;i<chunks.length;i++){
+      const {body:b,model:used}=await api('interactions',mdl=>({method:'POST',body:body(mdl,chunks[i])}),models);
+      const a=findAudio(b);if(!a)throw new Error('No audio returned (content may be blocked): '+JSON.stringify(b).slice(0,200));
+      bufs.push(b64(a));$('prog').style.width=((i+1)/chunks.length*100)+'%';log(`Part ${i+1}/${chunks.length} done (${used})`);
+    }
+    lastBlob=new Blob([mergeWav(bufs)],{type:'audio/wav'});
+    if($('audio').src)URL.revokeObjectURL($('audio').src);
+    $('audio').src=URL.createObjectURL(lastBlob);$('audio').playbackRate=+$('rate').value;$('dl').disabled=false;
+    addHist(lastBlob);await $('audio').play().catch(()=>{});log('Done ✔');
+  }catch(e){log('Error: '+e.message);if(e.message!=='Cancelled')alert(e.message)}
+  finally{busy=false;$('play').disabled=false}
+}
+function addHist(blob){
+  const url=URL.createObjectURL(blob),name=`tts-${$('voice').value}-${Date.now()}.wav`;
+  hist.unshift({url,name,t:$('text').value.slice(0,50)});hist=hist.slice(0,10);
+  $('hist').innerHTML='';hist.forEach(h=>{const d=document.createElement('div');d.className='hist';
+    d.innerHTML=`<span>${h.t.replace(/</g,'&lt;')}</span><button>▶</button><a href="${h.url}" download="${h.name}"><button>⬇</button></a>`;
+    d.querySelector('button').onclick=()=>{$('audio').src=h.url;$('audio').play()};$('hist').appendChild(d)});
+}
+$('play').onclick=synth;
+$('stop').onclick=()=>{cancel=true;$('audio').pause();$('audio').currentTime=0};
+$('dl').onclick=()=>{if(!lastBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(lastBlob);a.download=`tts-${$('voice').value}-${Date.now()}.wav`;a.click()};
+
+load();renderKeys();fillVoices();$('voice').value='Kore';
+</script>
+</body>
+</html>
